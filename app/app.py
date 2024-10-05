@@ -18,7 +18,7 @@ def load_data():
     cand_PE_abrev = pd.read_csv(fr'{data_path}\cand_2022_PE_abrev.csv')
     voto_PE_nominal = pd.read_csv(fr'{data_path}\votacao_mun_2022_PE_nominal.csv')
     voto_PE_valido = pd.read_csv(fr'{data_path}\votacao_mun_2022_PE_valido.csv')
-    malha_PE_mun = gpd.read_file(f'{data_path}\malha_PE_mun.geojson')
+    malha_PE_mun = gpd.read_file(fr'{data_path}\malha_PE_mun.geojson')
     
     voto_PE_nominal['CD_MUN'] = voto_PE_nominal['CD_MUN'].astype('Int64')
     voto_PE_valido['CD_MUN'] = voto_PE_valido['CD_MUN'].astype('Int64')
