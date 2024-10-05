@@ -16,11 +16,6 @@ prod_mode = os.getenv('PROD', '0')  # Default to '0' if not set
 prod = int(prod_mode) == 1
 
 if prod:
-    st.write("Production Mode")
-else:
-    st.write("Development Mode is ON")
-
-if prod:
     data_path = 'https://raw.githubusercontent.com/alwolmer/eleicoesPE/refs/heads/main/data_pipeline/render/'
 else:
     data_path = os.path.abspath('./data_pipeline/render/')
@@ -117,12 +112,12 @@ with col1:
 with col2:
     # st.image(preloaded_images[str(sq_cand)])
     try:
-        image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/blob/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpg"
+        image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpg"
         st.image(Image.open(requests.get(image_url, stream=True).raw))
-        print(image_url)
+        # print(image_url)
     except:
         try:
-            image_url = f"https://raw.githubusercontent.com/eleicoesPE/blob/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpeg"
+            image_url = f"https://raw.githubusercontent.com/eleicoesPE/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpeg"
             st.image(Image.open(requests.get(image_url, stream=True).raw))
         except:
             st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
