@@ -114,13 +114,9 @@ with col2:
     try:
         image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpg"
         st.image(Image.open(requests.get(image_url, stream=True).raw))
-        # print(image_url)
     except:
-        try:
-            image_url = f"https://raw.githubusercontent.com/eleicoesPE/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpeg"
-            st.image(Image.open(requests.get(image_url, stream=True).raw))
-        except:
-            st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
+        st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
+            
 
 
 voto_select = voto_PE_nominal[(voto_PE_nominal['NR_TURNO'] == turno_cand) & (voto_PE_nominal['CD_CARGO'] == cargo_cand) & (voto_PE_nominal['NR_VOTAVEL'] == numero_cand)].copy()
