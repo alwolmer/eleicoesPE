@@ -6,26 +6,44 @@ import numpy as np
 import folium
 import branca.colormap as cm
 from streamlit_folium import st_folium
+from PIL import Image
 
-
-data_path = os.path.abspath('./data_pipeline/render')
+dev = os.getenv('DEV')
+if 1 == dev:
+    data_path = 'https://raw.githubusercontent.com/alwolmer/eleicoesPE/refs/heads/main/data_pipeline/render/'
+else:
+    data_path = os.path.abspath('./data_pipeline/render/')
+    data_path += r"\\"
 
 # print(pd.read_csv(f'{data_path}\cand_2022_PE_abrev.csv'))
 
 @st.cache_data
 def load_data():
    
-    cand_PE_abrev = pd.read_csv(fr'{data_path}\cand_2022_PE_abrev.csv')
-    voto_PE_nominal = pd.read_csv(fr'{data_path}\votacao_mun_2022_PE_nominal.csv')
-    voto_PE_valido = pd.read_csv(fr'{data_path}\votacao_mun_2022_PE_valido.csv')
-    malha_PE_mun = gpd.read_file(fr'{data_path}\malha_PE_mun.geojson')
+    cand_PE_abrev = pd.read_csv(fr'{data_path}cand_2022_PE_abrev.csv')
+    voto_PE_nominal = pd.read_csv(fr'{data_path}votacao_mun_2022_PE_nominal.csv')
+    voto_PE_valido = pd.read_csv(fr'{data_path}votacao_mun_2022_PE_valido.csv')
+    malha_PE_mun = gpd.read_file(fr'{data_path}malha_PE_mun.geojson')
     
     voto_PE_nominal['CD_MUN'] = voto_PE_nominal['CD_MUN'].astype('Int64')
     voto_PE_valido['CD_MUN'] = voto_PE_valido['CD_MUN'].astype('Int64')
     malha_PE_mun['CD_MUN'] = malha_PE_mun['CD_MUN'].astype('Int64')
+    
     return cand_PE_abrev, voto_PE_nominal, voto_PE_valido, malha_PE_mun
 
+@st.cache_data
+def preload_images(image_folder):
+    images = {}
+    for filename in os.listdir(image_folder):
+        if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+            sq_cand = filename.split('_')[0].replace("FPE", "")
+            image_path = os.path.join(image_folder, filename)
+            images[sq_cand] = Image.open(image_path)
+            print(sq_cand, end=' ')
+    return images
+
 cand_PE_abrev, voto_PE_nominal, voto_PE_valido, malha_PE_mun = load_data()
+preloaded_images = preload_images(f'{data_path}foto_cand2022_PE_div')
 
 cargo_turno_key = {
     'GOVERNADOR - 1 TURNO': (3, 1),
@@ -80,10 +98,7 @@ with col1:
 
 # Add image to the second column
 with col2:
-    try:
-        st.image(fr"{data_path}\foto_cand2022_PE_div\FPE{sq_cand}_div.jpg")
-    except:
-        st.image(fr"{data_path}\foto_cand2022_PE_div\FPE{sq_cand}_div.jpeg")
+    st.image(preloaded_images[str(sq_cand)])
 
 
 voto_select = voto_PE_nominal[(voto_PE_nominal['NR_TURNO'] == turno_cand) & (voto_PE_nominal['CD_CARGO'] == cargo_cand) & (voto_PE_nominal['NR_VOTAVEL'] == numero_cand)].copy()
