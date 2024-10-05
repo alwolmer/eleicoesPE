@@ -7,15 +7,24 @@ import folium
 import branca.colormap as cm
 from streamlit_folium import st_folium
 from PIL import Image
+import requests
 
-dev = os.getenv('DEV')
-if 1 == dev:
+# Fetching the 'DEV' environment variable (returns None if not found)
+prod_mode = os.getenv('PROD', '0')  # Default to '0' if not set
+
+# Convert the value to integer or boolean as needed
+prod = int(prod_mode) == 1
+
+if prod:
+    st.write("Production Mode")
+else:
+    st.write("Development Mode is ON")
+
+if prod:
     data_path = 'https://raw.githubusercontent.com/alwolmer/eleicoesPE/refs/heads/main/data_pipeline/render/'
 else:
     data_path = os.path.abspath('./data_pipeline/render/')
     data_path += r"\\"
-
-# print(pd.read_csv(f'{data_path}\cand_2022_PE_abrev.csv'))
 
 @st.cache_data
 def load_data():
@@ -31,19 +40,27 @@ def load_data():
     
     return cand_PE_abrev, voto_PE_nominal, voto_PE_valido, malha_PE_mun
 
-@st.cache_data
-def preload_images(image_folder):
-    images = {}
-    for filename in os.listdir(image_folder):
-        if filename.endswith(".jpg") or filename.endswith(".jpeg"):
-            sq_cand = filename.split('_')[0].replace("FPE", "")
-            image_path = os.path.join(image_folder, filename)
-            images[sq_cand] = Image.open(image_path)
-            print(sq_cand, end=' ')
-    return images
+# @st.cache_data
+# def preload_images(image_folder=None):
+#     images = {}
+#     if image_folder is None:
+#         for sq_cand in cand_sq_with_images:
+#             image_path = f"https://github.com/<username>/<repository>/blob/main/foto_cand2022_PE_div/FPE{sq_cand}_div.jpg"
+#             images[sq_cand] = Image.open(image_path)
+#     else:
+#         for filename in os.listdir(image_folder):
+#             if filename.endswith(".jpg") or filename.endswith(".jpeg"):
+#                 sq_cand = filename.split('_')[0].replace("FPE", "")
+#                 image_path = os.path.join(image_folder, filename)
+#                 images[sq_cand] = Image.open(image_path)
+#     return images
 
 cand_PE_abrev, voto_PE_nominal, voto_PE_valido, malha_PE_mun = load_data()
-preloaded_images = preload_images(f'{data_path}foto_cand2022_PE_div')
+
+# if dev:
+#     preloaded_images = preload_images(f'{data_path}foto_cand2022_PE_div')
+# else:
+#     preloaded_images = preload_images()
 
 cargo_turno_key = {
     'GOVERNADOR - 1 TURNO': (3, 1),
@@ -98,7 +115,17 @@ with col1:
 
 # Add image to the second column
 with col2:
-    st.image(preloaded_images[str(sq_cand)])
+    # st.image(preloaded_images[str(sq_cand)])
+    try:
+        image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/blob/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpg"
+        st.image(Image.open(requests.get(image_url, stream=True).raw))
+        print(image_url)
+    except:
+        try:
+            image_url = f"https://raw.githubusercontent.com/eleicoesPE/blob/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpeg"
+            st.image(Image.open(requests.get(image_url, stream=True).raw))
+        except:
+            st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
 
 
 voto_select = voto_PE_nominal[(voto_PE_nominal['NR_TURNO'] == turno_cand) & (voto_PE_nominal['CD_CARGO'] == cargo_cand) & (voto_PE_nominal['NR_VOTAVEL'] == numero_cand)].copy()
