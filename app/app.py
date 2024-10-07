@@ -110,7 +110,6 @@ with col1:
 
 # Add image to the second column
 with col2:
-    # st.image(preloaded_images[str(sq_cand)])
     try:
         image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpg"
         st.image(Image.open(requests.get(image_url, stream=True).raw))
@@ -118,68 +117,83 @@ with col2:
         st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
             
 
+@st.cache_data
+def generate_voto_display(voto_PE_nominal, voto_PE_valido, _malha_PE_mun, turno_cand, cargo_cand, numero_cand):
+    voto_select = voto_PE_nominal[(voto_PE_nominal['NR_TURNO'] == turno_cand) & 
+                                  (voto_PE_nominal['CD_CARGO'] == cargo_cand) & 
+                                  (voto_PE_nominal['NR_VOTAVEL'] == numero_cand)].copy()
 
-voto_select = voto_PE_nominal[(voto_PE_nominal['NR_TURNO'] == turno_cand) & (voto_PE_nominal['CD_CARGO'] == cargo_cand) & (voto_PE_nominal['NR_VOTAVEL'] == numero_cand)].copy()
-voto_cand_total = voto_select['QT_VOTOS'].sum()
-voto_select = voto_select.merge(voto_PE_valido[(voto_PE_valido['NR_TURNO'] == turno_cand) & (voto_PE_valido['CD_CARGO'] == cargo_cand)][['CD_MUN', 'QT_VOTOS']], on='CD_MUN', how='left', suffixes=('_CAND_LOCAL', '_VALIDOS_LOCAL')).fillna(0)
-voto_select['FREQ_LOCAL'] = np.round(voto_select['QT_VOTOS_CAND_LOCAL'] / voto_select['QT_VOTOS_VALIDOS_LOCAL'] * 100, 2)
-voto_select['INCID_LOCAL'] = np.round(voto_select['QT_VOTOS_CAND_LOCAL'] / voto_cand_total * 100, 2)
+    voto_cand_total = voto_select['QT_VOTOS'].sum()
 
-voto_display = gpd.GeoDataFrame(voto_select.merge(malha_PE_mun, on='CD_MUN', how='outer').fillna(0))
+    voto_select = voto_select.merge(
+        voto_PE_valido[(voto_PE_valido['NR_TURNO'] == turno_cand) & 
+                       (voto_PE_valido['CD_CARGO'] == cargo_cand)][['CD_MUN', 'QT_VOTOS']], 
+        on='CD_MUN', 
+        how='left', 
+        suffixes=('_CAND_LOCAL', '_VALIDOS_LOCAL')
+    ).fillna(0)
+
+    # Calculate percentages
+    voto_select['FREQ_LOCAL'] = np.round(voto_select['QT_VOTOS_CAND_LOCAL'] / voto_select['QT_VOTOS_VALIDOS_LOCAL'] * 100, 2)
+    voto_select['INCID_LOCAL'] = np.round(voto_select['QT_VOTOS_CAND_LOCAL'] / voto_cand_total * 100, 2)
+
+    # Merge with GeoDataFrame
+    voto_display = gpd.GeoDataFrame(voto_select.merge(_malha_PE_mun, on='CD_MUN', how='outer').fillna(0))
+    
+    return voto_display, voto_cand_total
+
+# Generate and cache voto_display
+voto_display, voto_cand_total = generate_voto_display(voto_PE_nominal, voto_PE_valido, malha_PE_mun, turno_cand, cargo_cand, numero_cand)
 
 c2 = st.container()
 
 c2.write(f"Número total de votos: {voto_cand_total}")
 
-# Frequency of votes per location
+def style_function(feature, cmap, column):
+    return {
+        'fillColor': cmap(feature['properties'][column]),
+        'fillOpacity': 0.9,
+        'color': 'black',
+        'weight': 0.7,
+        'opacity': 0.5,
+    }
 
-cmap_freq = cm.linear.YlOrRd_04.scale(voto_display['FREQ_LOCAL'].min(), voto_display['FREQ_LOCAL'].max())
-cmap_freq.caption = '% dos votos no município'
+def create_tooltip():
+    return folium.GeoJsonTooltip(
+        fields=['NM_MUN', 'QT_VOTOS_CAND_LOCAL', 'FREQ_LOCAL', 'INCID_LOCAL'],
+        aliases=['Município', 'N. votos', '% no Município', '% dos votos cand.']
+    )
 
-# Frequency Map
-freq_map = folium.Map([-8.319639, -37.635917], zoom_start=7.3)
-folium.GeoJson(voto_display,
-                style_function=lambda feature: {
-                    'fillColor': cmap_freq(feature['properties']['FREQ_LOCAL']),
-                    'fillOpacity': 0.9,
-                    'color': 'black',
-                    'weight': 0.7,
-                    'opacity': 0.5,
-                },
-                tooltip=folium.GeoJsonTooltip(
-                    fields=['NM_MUN', 'QT_VOTOS_CAND_LOCAL', 'FREQ_LOCAL', 'INCID_LOCAL'],
-                    aliases=['Município', 'N. votos', '% no Município', '% dos votos cand.']
-                )
-                ).add_to(freq_map)
-cmap_freq.add_to(freq_map)
+from functools import partial
 
-# Incidence of votes per location
+# Generate the maps
+def generate_choromap(_voto_display, column):
+    cmap = cm.linear.YlOrRd_04.scale(_voto_display[column].min(), _voto_display[column].max())
+    cmap.caption = '% dos votos no município' if column == 'FREQ_LOCAL' else '% dos votos da candidatura'
 
-# Incidence colormap
-cmap_incid = cm.linear.YlOrRd_04.scale(voto_display['INCID_LOCAL'].min(), voto_display['INCID_LOCAL'].max())
-cmap_incid.caption = '% dos votos da candidatura'
+    # Frequency Map
+    choromap = folium.Map([-8.319639, -37.635917], zoom_start=7.3)
+    
+    # Add GeoJson to the map using the regular function instead of lambda
+    style_func = partial(style_function, cmap=cmap, column=column)
+    folium.GeoJson(
+        _voto_display,
+        # style_function=lambda feature: style_function(feature, cmap, column),  # Apply styling per feature
+        style_function=style_func,
+        tooltip=create_tooltip()
+    ).add_to(choromap)
+    
+    cmap.add_to(choromap)
+    
+    return choromap
 
-# Frequency Map
-incid_map = folium.Map([-8.319639, -37.635917], zoom_start=7.3)
-folium.GeoJson(voto_display,
-                style_function=lambda feature: {
-                    'fillColor': cmap_incid(feature['properties']['INCID_LOCAL']),
-                    'fillOpacity': 0.9,
-                    'color': 'black',
-                    'weight': 0.7,
-                    'opacity': 0.5,
-                },
-                tooltip=folium.GeoJsonTooltip(
-                    fields=['NM_MUN', 'QT_VOTOS_CAND_LOCAL', 'FREQ_LOCAL', 'INCID_LOCAL'],
-                    aliases=['Município', 'N. votos', '% no Município', '% dos votos cand.']
-                )
-                ).add_to(incid_map)
-cmap_incid.add_to(incid_map)
+freq_map = generate_choromap(voto_display, 'FREQ_LOCAL')
+incid_map = generate_choromap(voto_display, 'INCID_LOCAL')
 
 with st.container():
     st.write("Frequência")
-    st_folium(freq_map, width=700, height=500)
+    st_folium(freq_map, use_container_width=True, height=500, returned_objects=[])
 
 with st.container():
     st.write("Incidência")
-    st_folium(incid_map, width=700, height=500)
+    st_folium(incid_map, use_container_width=True, height=500, returned_objects=[])
