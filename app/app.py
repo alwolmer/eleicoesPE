@@ -98,7 +98,7 @@ with col1:
 # Add image to the second column
 with col2:
     try:
-        image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/foto_cand2022_PE_div/FPE{sq_cand}_div.jpg"
+        image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/fotos{UF}2022/{sq_cand}.jpg"
         st.image(Image.open(requests.get(image_url, stream=True).raw))
     except:
         st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
