@@ -20,16 +20,20 @@ prod = int(prod_mode) == 1
 if prod:
     data_path = 'https://raw.githubusercontent.com/alwolmer/eleicoesPE/refs/heads/main/data_pipeline/render/'
 else:
-    data_path = os.path.abspath('./data_pipeline/render/')
-    data_path += r"\\"
+    data_path = os.path.abspath(os.path.join('.', 'data_pipeline', 'render'))
 
 @st.cache_data
 def load_data():
-   
-    cand_UF_abrev = pd.read_csv(fr'{data_path}cand_abrev_{UF}_2022.csv')
-    voto_mun_valido = pd.read_csv(fr'{data_path}voto_mun_valido_{UF}_2022.csv')
-    voto_mun_valido_total = pd.read_csv(fr'{data_path}voto_mun_valido_{UF}_total_2022.csv')
-    malha_UF_mun = gpd.read_file(fr'{data_path}malha_{UF}_mun.geojson')
+    if prod:
+        cand_UF_abrev = pd.read_csv(f'{data_path}cand_abrev_{UF}_2022.csv')
+        voto_mun_valido = pd.read_csv(f'{data_path}voto_mun_valido_{UF}_2022.csv')
+        voto_mun_valido_total = pd.read_csv(f'{data_path}voto_mun_valido_{UF}_total_2022.csv')
+        malha_UF_mun = gpd.read_file(f'{data_path}malha_{UF}_mun.geojson')
+    else:
+        cand_UF_abrev = pd.read_csv(os.path.join(data_path, f'cand_abrev_{UF}_2022.csv'))
+        voto_mun_valido = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{UF}_2022.csv'))
+        voto_mun_valido_total = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{UF}_total_2022.csv'))
+        malha_UF_mun = gpd.read_file(os.path.join(data_path, f'malha_{UF}_mun.geojson'))
     
     voto_mun_valido['CD_MUN'] = voto_mun_valido['CD_MUN'].astype('Int64')
     voto_mun_valido_total['CD_MUN'] = voto_mun_valido_total['CD_MUN'].astype('Int64')
@@ -98,8 +102,12 @@ with col1:
 # Add image to the second column
 with col2:
     try:
-        image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/fotos{UF}2022/{sq_cand}.jpg"
-        st.image(Image.open(requests.get(image_url, stream=True).raw))
+        if prod:
+            image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/fotos{UF}2022/{sq_cand}.jpg"
+            st.image(Image.open(requests.get(image_url, stream=True).raw))
+        else:
+            image_path = os.path.join(data_path, f'fotos{UF}2022/{sq_cand}.jpg')
+            st.image(image_path)
     except:
         st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
             
