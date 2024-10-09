@@ -31,20 +31,22 @@ def load_data(uf):
         voto_mun_partido = pd.read_csv(f'{data_path}voto_mun_partido_{uf}_2022.csv')
         voto_mun_valido_total = pd.read_csv(f'{data_path}voto_mun_valido_{uf}_total_2022.csv')
         malha_UF_mun = gpd.read_file(f'{data_path}malha_{uf}_mun.geojson')
+        malha_UF_int = gpd.read_file(f'{data_path}malha_{uf}_int.geosjon')
     else:
         cand_UF_abrev = pd.read_csv(os.path.join(data_path, f'cand_abrev_{uf}_2022.csv'))
         voto_mun_valido = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{uf}_2022.csv'))
         voto_mun_partido = pd.read_csv(os.path.join(data_path, f'voto_mun_partido_{uf}_2022.csv'))
         voto_mun_valido_total = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{uf}_total_2022.csv'))
         malha_UF_mun = gpd.read_file(os.path.join(data_path, f'malha_{uf}_mun.geojson'))
+        malha_UF_int = gpd.read_file(os.path.join(data_path, f'malha_{uf}_int.geojson'))
     
     voto_mun_valido['CD_MUN'] = voto_mun_valido['CD_MUN'].astype('Int64')
     voto_mun_valido_total['CD_MUN'] = voto_mun_valido_total['CD_MUN'].astype('Int64')
     malha_UF_mun['CD_MUN'] = malha_UF_mun['CD_MUN'].astype('Int64')
     
-    return cand_UF_abrev, voto_mun_valido, voto_mun_partido, voto_mun_valido_total, malha_UF_mun
+    return cand_UF_abrev, voto_mun_valido, voto_mun_partido, voto_mun_valido_total, malha_UF_mun, malha_UF_int
 
-cand_UF_abrev, voto_mun_valido, voto_mun_partido, voto_mun_valido_total, malha_UF_mun = load_data(uf)
+cand_UF_abrev, voto_mun_valido, voto_mun_partido, voto_mun_valido_total, malha_UF_mun, malha_UF_int = load_data(uf)
 
 # if dev:
 #     preloaded_images = preload_images(f'{data_path}foto_cand2022_PE_div')
@@ -186,6 +188,14 @@ def style_function(feature, cmap, column):
         'opacity': 0.5,
     }
 
+def style_function_int(feature):
+    return {
+        'fillOpacity': 0,
+        'color': 'black',
+        'weight': 1,
+        # 'dashArray': '5, 5'
+    }
+
 def create_tooltip():
     return folium.GeoJsonTooltip(
         fields=['NM_MUN', 'QT_VOTOS_CAND_LOCAL', 'FREQ_LOCAL', 'INCID_LOCAL'],
@@ -209,6 +219,12 @@ def generate_choromap(_voto_display, column):
         # style_function=lambda feature: style_function(feature, cmap, column),  # Apply styling per feature
         style_function=style_func,
         tooltip=create_tooltip()
+    ).add_to(choromap)
+    
+    folium.GeoJson(
+        malha_UF_int,
+        style_function=style_function_int,
+        interactive=False
     ).add_to(choromap)
     
     cmap.add_to(choromap)
