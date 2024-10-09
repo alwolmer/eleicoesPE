@@ -31,7 +31,7 @@ def load_data(uf):
         voto_mun_partido = pd.read_csv(f'{data_path}voto_mun_partido_{uf}_2022.csv')
         voto_mun_valido_total = pd.read_csv(f'{data_path}voto_mun_valido_{uf}_total_2022.csv')
         malha_UF_mun = gpd.read_file(f'{data_path}malha_{uf}_mun.geojson')
-        malha_UF_int = gpd.read_file(f'{data_path}malha_{uf}_int.geosjon')
+        malha_UF_int = gpd.read_file(f'{data_path}malha_{uf}_int.geojson')
     else:
         cand_UF_abrev = pd.read_csv(os.path.join(data_path, f'cand_abrev_{uf}_2022.csv'))
         voto_mun_valido = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{uf}_2022.csv'))
