@@ -69,11 +69,13 @@ sit_elec_key = {
 }
 
 selected_cargo_turno = st.sidebar.selectbox('Escolha o cargo', cargo_turno_key.keys())
-cand_selected_cargo_turno = cand_UF_abrev[(cand_UF_abrev['CD_CARGO'] == cargo_turno_key[selected_cargo_turno][0]) & (cand_UF_abrev['NR_TURNO'] == cargo_turno_key[selected_cargo_turno][1]) & ((cand_UF_abrev['CD_SITUACAO_CANDIDATURA'] == 12))] # 12 means able candidate, who actually did run
+cand_selected_cargo_turno = cand_UF_abrev[(cand_UF_abrev['CD_CARGO'] == cargo_turno_key[selected_cargo_turno][0]) & 
+                                          (cand_UF_abrev['NR_TURNO'] == cargo_turno_key[selected_cargo_turno][1]) & 
+                                          ((cand_UF_abrev['CD_SITUACAO_CANDIDATURA'] == 12))] # 12 means able candidate, who actually did run
 
 partido_list = cand_selected_cargo_turno[['SG_PARTIDO', 'NR_PARTIDO']].drop_duplicates().sort_values(by='SG_PARTIDO')
 partido_list_select = ['TODOS'] + partido_list['SG_PARTIDO'].tolist()
-selected_partido = st.sidebar.selectbox('Escolha o partido', partido_list)
+selected_partido = st.sidebar.selectbox('Escolha o partido', partido_list_select)
 
 if 'TODOS' == selected_partido:
     candidato_list = sorted(cand_selected_cargo_turno['NM_URNA_CANDIDATO'].unique().tolist())
