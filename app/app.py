@@ -28,11 +28,13 @@ def load_data(uf):
     if prod:
         cand_UF_abrev = pd.read_csv(f'{data_path}cand_abrev_{uf}_2022.csv')
         voto_mun_valido = pd.read_csv(f'{data_path}voto_mun_valido_{uf}_2022.csv')
+        voto_mun_partido = pd.read_csv(f'{data_path}voto_mun_partido_{uf}_2022.csv')
         voto_mun_valido_total = pd.read_csv(f'{data_path}voto_mun_valido_{uf}_total_2022.csv')
         malha_UF_mun = gpd.read_file(f'{data_path}malha_{uf}_mun.geojson')
     else:
         cand_UF_abrev = pd.read_csv(os.path.join(data_path, f'cand_abrev_{uf}_2022.csv'))
         voto_mun_valido = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{uf}_2022.csv'))
+        voto_mun_partido = pd.read_csv(os.path.join(data_path, f'voto_mun_partido_{uf}_2022.csv'))
         voto_mun_valido_total = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{uf}_total_2022.csv'))
         malha_UF_mun = gpd.read_file(os.path.join(data_path, f'malha_{uf}_mun.geojson'))
     
@@ -40,9 +42,9 @@ def load_data(uf):
     voto_mun_valido_total['CD_MUN'] = voto_mun_valido_total['CD_MUN'].astype('Int64')
     malha_UF_mun['CD_MUN'] = malha_UF_mun['CD_MUN'].astype('Int64')
     
-    return cand_UF_abrev, voto_mun_valido, voto_mun_valido_total, malha_UF_mun
+    return cand_UF_abrev, voto_mun_valido, voto_mun_partido, voto_mun_valido_total, malha_UF_mun
 
-cand_UF_abrev, voto_mun_valido, voto_mun_valido_total, malha_UF_mun = load_data(uf)
+cand_UF_abrev, voto_mun_valido, voto_mun_partido, voto_mun_valido_total, malha_UF_mun = load_data(uf)
 
 # if dev:
 #     preloaded_images = preload_images(f'{data_path}foto_cand2022_PE_div')
@@ -69,55 +71,79 @@ sit_elec_key = {
 selected_cargo_turno = st.sidebar.selectbox('Escolha o cargo', cargo_turno_key.keys())
 cand_selected_cargo_turno = cand_UF_abrev[(cand_UF_abrev['CD_CARGO'] == cargo_turno_key[selected_cargo_turno][0]) & (cand_UF_abrev['NR_TURNO'] == cargo_turno_key[selected_cargo_turno][1]) & ((cand_UF_abrev['CD_SITUACAO_CANDIDATURA'] == 12))] # 12 means able candidate, who actually did run
 
-partido_list = ['TODOS'] + sorted(cand_selected_cargo_turno['SG_PARTIDO'].unique().tolist())
+partido_list = cand_selected_cargo_turno[['SG_PARTIDO', 'NR_PARTIDO']].drop_duplicates().sort_values(by='SG_PARTIDO')
+partido_list_select = ['TODOS'] + partido_list['SG_PARTIDO'].tolist()
 selected_partido = st.sidebar.selectbox('Escolha o partido', partido_list)
 
 if 'TODOS' == selected_partido:
-    candidates = cand_selected_cargo_turno['NM_URNA_CANDIDATO'].sort_values()
+    candidato_list = sorted(cand_selected_cargo_turno['NM_URNA_CANDIDATO'].unique().tolist())
 else:
-    candidates = cand_selected_cargo_turno[cand_selected_cargo_turno['SG_PARTIDO'] == selected_partido]['NM_URNA_CANDIDATO'].sort_values()
-selected_candidate = st.sidebar.selectbox('Escolha o candidato', candidates)
+    candidato_list = ['TODOS'] + sorted(cand_selected_cargo_turno[cand_selected_cargo_turno['SG_PARTIDO'] == selected_partido]['NM_URNA_CANDIDATO'].unique().tolist())
 
-cand_details = cand_UF_abrev[(cand_UF_abrev['CD_CARGO'] == cargo_turno_key[selected_cargo_turno][0]) & (cand_UF_abrev['NR_TURNO'] == cargo_turno_key[selected_cargo_turno][1]) & (cand_UF_abrev['NM_URNA_CANDIDATO'] == selected_candidate)]
+selected_candidate = st.sidebar.selectbox('Escolha o candidato', candidato_list)
 
-c1 = st.container()
+if selected_candidate != 'TODOS':
+    cand_details = cand_UF_abrev[(cand_UF_abrev['CD_CARGO'] == cargo_turno_key[selected_cargo_turno][0]) & (cand_UF_abrev['NR_TURNO'] == cargo_turno_key[selected_cargo_turno][1]) & (cand_UF_abrev['NM_URNA_CANDIDATO'] == selected_candidate)]
 
-col1, col2 = c1.columns([2, 1])  # Adjust the numbers to change the width
+    c1 = st.container()
 
-cargo_cand = cand_details['CD_CARGO'].values[0]
-turno_cand = cand_details['NR_TURNO'].values[0]
-nome_urna_cand = cand_details['NM_URNA_CANDIDATO'].values[0]
-nome_completo_cand = cand_details['NM_CANDIDATO'].values[0]
-partido_cand = cand_details['SG_PARTIDO'].values[0]
-numero_cand = cand_details['NR_CANDIDATO'].values[0]
-situacao_cand = cand_details['CD_SIT_TOT_TURNO'].values[0]
-sq_cand = cand_details['SQ_CANDIDATO'].values[0]
+    col1, col2 = c1.columns([2, 1])  # Adjust the numbers to change the width
 
-with col1:
-    st.write(f"Nome de urna: {nome_urna_cand}")
-    st.write(f"Nome completo: {nome_completo_cand}")
-    st.write(f"Partido: {partido_cand}")
-    st.write(f"Número eleitoral: {numero_cand}")
-    st.write(f"Situação: {sit_elec_key[situacao_cand]}")
+    cargo_cand = cand_details['CD_CARGO'].values[0]
+    turno_cand = cand_details['NR_TURNO'].values[0]
+    nome_urna_cand = cand_details['NM_URNA_CANDIDATO'].values[0]
+    nome_completo_cand = cand_details['NM_CANDIDATO'].values[0]
+    partido_cand = cand_details['SG_PARTIDO'].values[0]
+    numero_cand = cand_details['NR_CANDIDATO'].values[0]
+    situacao_cand = cand_details['CD_SIT_TOT_TURNO'].values[0]
+    sq_cand = cand_details['SQ_CANDIDATO'].values[0]
 
-# Add image to the second column
-with col2:
-    try:
-        if prod:
-            image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/fotos{uf}2022/{sq_cand}.jpg"
-            st.image(Image.open(requests.get(image_url, stream=True).raw))
-        else:
-            image_path = os.path.join(data_path, f'fotos{uf}2022/{sq_cand}.jpg')
-            st.image(image_path)
-    except:
-        st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
+    with col1:
+        st.write(f"Nome de urna: {nome_urna_cand}")
+        st.write(f"Nome completo: {nome_completo_cand}")
+        st.write(f"Partido: {partido_cand}")
+        st.write(f"Número eleitoral: {numero_cand}")
+        st.write(f"Situação: {sit_elec_key[situacao_cand]}")
+
+    # Add image to the second column
+    with col2:
+        try:
+            if prod:
+                image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/fotos{uf}2022/{sq_cand}.jpg"
+                st.image(Image.open(requests.get(image_url, stream=True).raw))
+            else:
+                image_path = os.path.join(data_path, f'fotos{uf}2022/{sq_cand}.jpg')
+                st.image(image_path)
+        except:
+            st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
+else:
+    cargo_cand = cargo_turno_key[selected_cargo_turno][0]
+    turno_cand = cargo_turno_key[selected_cargo_turno][1]
+    partido_cand = partido_list[partido_list['SG_PARTIDO'] == selected_partido]['SG_PARTIDO'].values[0]
+    numero_cand = partido_list[partido_list['SG_PARTIDO'] == selected_partido]['NR_PARTIDO'].values[0]
+
+    # st.write(f'cargo {cargo_cand}, turno {turno_cand}')
+
+    c1 = st.container()
+
+    col1, col2 = c1.columns([2, 1])
+
+    with col1:
+        st.write(f"Partido: {partido_cand}")
+        st.write(f"Número eleitoral: {numero_cand}")
             
 
 @st.cache_data
-def generate_voto_display(voto_mun_valido, voto_mun_valido_total, _malha_UF_mun, turno_cand, cargo_cand, numero_cand):
-    voto_select = voto_mun_valido[(voto_mun_valido['NR_TURNO'] == turno_cand) & 
-                                  (voto_mun_valido['CD_CARGO'] == cargo_cand) & 
-                                  (voto_mun_valido['NR_VOTAVEL'] == numero_cand)].copy()
+def generate_voto_display(voto_mun_valido, voto_mun_valido_total, _malha_UF_mun, turno_cand, cargo_cand, numero_cand, partido):
+    if not partido:
+        voto_select = voto_mun_valido[(voto_mun_valido['NR_TURNO'] == turno_cand) & 
+                                    (voto_mun_valido['CD_CARGO'] == cargo_cand) & 
+                                    (voto_mun_valido['NR_VOTAVEL'] == numero_cand)].copy()
+    else:
+        voto_select = voto_mun_partido[(voto_mun_partido['NR_TURNO'] == turno_cand) & 
+                                    (voto_mun_partido['CD_CARGO'] == cargo_cand) & 
+                                    (voto_mun_partido['NR_VOTAVEL'] == numero_cand)].copy()    
+
 
     voto_cand_total = voto_select['QT_VOTOS'].sum()
 
@@ -139,7 +165,11 @@ def generate_voto_display(voto_mun_valido, voto_mun_valido_total, _malha_UF_mun,
     return voto_display, voto_cand_total
 
 # Generate and cache voto_display
-voto_display, voto_cand_total = generate_voto_display(voto_mun_valido, voto_mun_valido_total, malha_UF_mun, turno_cand, cargo_cand, numero_cand)
+
+if selected_candidate == 'TODOS':
+    voto_display, voto_cand_total = generate_voto_display(voto_mun_valido, voto_mun_valido_total, malha_UF_mun, turno_cand, cargo_cand, numero_cand, True)
+else:
+    voto_display, voto_cand_total = generate_voto_display(voto_mun_valido, voto_mun_valido_total, malha_UF_mun, turno_cand, cargo_cand, numero_cand, False)
 
 c2 = st.container()
 
