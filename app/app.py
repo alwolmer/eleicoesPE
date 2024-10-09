@@ -12,7 +12,8 @@ import requests
 # Fetching the 'DEV' environment variable (returns None if not found)
 prod_mode = os.getenv('PROD', '0')  # Default to '0' if not set
 
-UF = 'PE' # Hardcode for now
+selected_uf = st.sidebar.selectbox('Escolha o estado', ['PE'])
+uf = selected_uf
 
 # Convert the value to integer or boolean as needed
 prod = int(prod_mode) == 1
@@ -23,17 +24,17 @@ else:
     data_path = os.path.abspath(os.path.join('.', 'data_pipeline', 'render'))
 
 @st.cache_data
-def load_data():
+def load_data(uf):
     if prod:
-        cand_UF_abrev = pd.read_csv(f'{data_path}cand_abrev_{UF}_2022.csv')
-        voto_mun_valido = pd.read_csv(f'{data_path}voto_mun_valido_{UF}_2022.csv')
-        voto_mun_valido_total = pd.read_csv(f'{data_path}voto_mun_valido_{UF}_total_2022.csv')
-        malha_UF_mun = gpd.read_file(f'{data_path}malha_{UF}_mun.geojson')
+        cand_UF_abrev = pd.read_csv(f'{data_path}cand_abrev_{uf}_2022.csv')
+        voto_mun_valido = pd.read_csv(f'{data_path}voto_mun_valido_{uf}_2022.csv')
+        voto_mun_valido_total = pd.read_csv(f'{data_path}voto_mun_valido_{uf}_total_2022.csv')
+        malha_UF_mun = gpd.read_file(f'{data_path}malha_{uf}_mun.geojson')
     else:
-        cand_UF_abrev = pd.read_csv(os.path.join(data_path, f'cand_abrev_{UF}_2022.csv'))
-        voto_mun_valido = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{UF}_2022.csv'))
-        voto_mun_valido_total = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{UF}_total_2022.csv'))
-        malha_UF_mun = gpd.read_file(os.path.join(data_path, f'malha_{UF}_mun.geojson'))
+        cand_UF_abrev = pd.read_csv(os.path.join(data_path, f'cand_abrev_{uf}_2022.csv'))
+        voto_mun_valido = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{uf}_2022.csv'))
+        voto_mun_valido_total = pd.read_csv(os.path.join(data_path, f'voto_mun_valido_{uf}_total_2022.csv'))
+        malha_UF_mun = gpd.read_file(os.path.join(data_path, f'malha_{uf}_mun.geojson'))
     
     voto_mun_valido['CD_MUN'] = voto_mun_valido['CD_MUN'].astype('Int64')
     voto_mun_valido_total['CD_MUN'] = voto_mun_valido_total['CD_MUN'].astype('Int64')
@@ -41,7 +42,7 @@ def load_data():
     
     return cand_UF_abrev, voto_mun_valido, voto_mun_valido_total, malha_UF_mun
 
-cand_UF_abrev, voto_mun_valido, voto_mun_valido_total, malha_UF_mun = load_data()
+cand_UF_abrev, voto_mun_valido, voto_mun_valido_total, malha_UF_mun = load_data(uf)
 
 # if dev:
 #     preloaded_images = preload_images(f'{data_path}foto_cand2022_PE_div')
@@ -103,10 +104,10 @@ with col1:
 with col2:
     try:
         if prod:
-            image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/fotos{UF}2022/{sq_cand}.jpg"
+            image_url = f"https://raw.githubusercontent.com/alwolmer/eleicoesPE/main/data_pipeline/render/fotos{uf}2022/{sq_cand}.jpg"
             st.image(Image.open(requests.get(image_url, stream=True).raw))
         else:
-            image_path = os.path.join(data_path, f'fotos{UF}2022/{sq_cand}.jpg')
+            image_path = os.path.join(data_path, f'fotos{uf}2022/{sq_cand}.jpg')
             st.image(image_path)
     except:
         st.write(f"Não foi possível encontar imagem para o candidato {sq_cand}")
